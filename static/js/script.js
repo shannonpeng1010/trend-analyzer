@@ -1,22 +1,48 @@
 // 全局变量
 let selectedFiles = [];
-let availableStyles = [];
+let currentTemplateType = 'daily';
+let templates = {
+    daily: '',
+    weekly: '',
+    monthly: ''
+};
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
+    loadTemplates();
 });
 
 // 初始化应用
 async function initializeApp() {
-    // 加载分析风格
-    await loadStyles();
-
     // 绑定上传区域事件
     setupUploadArea();
 
+    // 绑定粘贴区域事件
+    setupPasteArea();
+
     // 加载历史记录
     loadHistory();
+}
+
+// 切换标签页
+function switchTab(tab) {
+    const uploadTab = document.getElementById('uploadTab');
+    const pasteTab = document.getElementById('pasteTab');
+    const uploadBtn = document.querySelectorAll('.tab-btn')[0];
+    const pasteBtn = document.querySelectorAll('.tab-btn')[1];
+
+    if (tab === 'upload') {
+        uploadTab.style.display = 'block';
+        pasteTab.style.display = 'none';
+        uploadBtn.classList.add('active');
+        pasteBtn.classList.remove('active');
+    } else {
+        uploadTab.style.display = 'none';
+        pasteTab.style.display = 'block';
+        uploadBtn.classList.remove('active');
+        pasteBtn.classList.add('active');
+    }
 }
 
 // 设置上传区域
@@ -48,6 +74,64 @@ function setupUploadArea() {
         e.preventDefault();
         uploadArea.classList.remove('dragover');
         handleFiles(e.dataTransfer.files);
+    });
+}
+
+// 设置粘贴区域
+function setupPasteArea() {
+    const pasteArea = document.getElementById('pasteArea');
+
+    // 监听粘贴事件
+    pasteArea.addEventListener('paste', (e) => {
+        e.preventDefault();
+        pasteArea.classList.add('pasting');
+
+        const items = e.clipboardData.items;
+        const imageFiles = [];
+
+        for (let item of items) {
+            if (item.type.indexOf('image') !== -1) {
+                const file = item.getAsFile();
+                imageFiles.push(file);
+            }
+        }
+
+        if (imageFiles.length > 0) {
+            handleFiles(imageFiles);
+            setTimeout(() => {
+                pasteArea.classList.remove('pasting');
+            }, 500);
+        } else {
+            alert('剪贴板中没有图片，请先复制图片后再粘贴');
+            pasteArea.classList.remove('pasting');
+        }
+    });
+
+    // 全局粘贴快捷键
+    document.addEventListener('paste', (e) => {
+        // 如果在粘贴标签页，且不是在输入框中
+        const pasteTab = document.getElementById('pasteTab');
+        const activeElement = document.activeElement;
+
+        if (pasteTab.style.display !== 'none' &&
+            activeElement.tagName !== 'TEXTAREA' &&
+            activeElement.tagName !== 'INPUT') {
+
+            e.preventDefault();
+            const items = e.clipboardData.items;
+            const imageFiles = [];
+
+            for (let item of items) {
+                if (item.type.indexOf('image') !== -1) {
+                    const file = item.getAsFile();
+                    imageFiles.push(file);
+                }
+            }
+
+            if (imageFiles.length > 0) {
+                handleFiles(imageFiles);
+            }
+        }
     });
 }
 
@@ -93,35 +177,6 @@ function removeFile(index) {
     displayPreview();
 }
 
-// 加载分析风格
-async function loadStyles() {
-    try {
-        const response = await fetch('/api/styles');
-        const data = await response.json();
-        availableStyles = data.styles;
-        displayStyles();
-    } catch (error) {
-        console.error('加载分析风格失败:', error);
-        alert('加载分析风格失败，请刷新页面重试');
-    }
-}
-
-// 显示分析风格
-function displayStyles() {
-    const styleGrid = document.getElementById('styleGrid');
-    styleGrid.innerHTML = '';
-
-    availableStyles.forEach(style => {
-        const styleItem = document.createElement('div');
-        styleItem.className = 'style-item';
-        styleItem.innerHTML = `
-            <input type="checkbox" id="style_${style.key}" value="${style.key}">
-            <label for="style_${style.key}" class="style-label">${style.name}</label>
-        `;
-        styleGrid.appendChild(styleItem);
-    });
-}
-
 // 开始分析
 async function startAnalyze() {
     // 验证输入
@@ -130,24 +185,50 @@ async function startAnalyze() {
         return;
     }
 
-    const selectedStyles = Array.from(document.querySelectorAll('.style-item input:checked'))
+    // 获取选择的风格
+    const tone = document.querySelector('input[name="tone"]:checked').value;
+    const views = Array.from(document.querySelectorAll('.style-grid input[type="checkbox"]:checked'))
+        .filter(input => input.id.startsWith('view_'))
+        .map(input => input.value);
+    const formats = Array.from(document.querySelectorAll('.style-grid input[type="checkbox"]:checked'))
+        .filter(input => input.id.startsWith('format_'))
         .map(input => input.value);
 
-    if (selectedStyles.length === 0) {
-        alert('请至少选择一种分析风格');
+    if (views.length === 0) {
+        alert('请至少选择一个分析视角');
         return;
     }
+
+    // 组合风格
+    const styles = [];
+
+    // 生成 语气+视角 组合
+    views.forEach(view => {
+        styles.push(`${tone}_${view}`);
+    });
+
+    // 添加报告格式
+    formats.forEach(format => {
+        styles.push(`${format}_report`);
+    });
 
     // 准备表单数据
     const formData = new FormData();
     selectedFiles.forEach(file => {
         formData.append('images', file);
     });
-    selectedStyles.forEach(style => {
+    styles.forEach(style => {
         formData.append('styles', style);
     });
     formData.append('context', document.getElementById('userContext').value);
     formData.append('name', document.getElementById('saveName').value);
+
+    // 添加模板信息
+    formats.forEach(format => {
+        if (templates[format]) {
+            formData.append(`template_${format}`, templates[format]);
+        }
+    });
 
     // 显示加载提示
     showLoading(true);
@@ -228,9 +309,6 @@ function resetAnalysis() {
     document.getElementById('previewArea').innerHTML = '';
     document.getElementById('userContext').value = '';
     document.getElementById('saveName').value = '';
-    document.querySelectorAll('.style-item input').forEach(input => {
-        input.checked = false;
-    });
     document.getElementById('resultSection').style.display = 'none';
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -353,7 +431,58 @@ async function deleteHistory(recordId) {
     }
 }
 
-// 简单的 Markdown 解析器（如果不想引入外部库）
+// 模板管理
+function toggleTemplateManage() {
+    const manage = document.getElementById('templateManage');
+    manage.style.display = manage.style.display === 'none' ? 'block' : 'none';
+}
+
+function switchTemplateType(type) {
+    currentTemplateType = type;
+
+    // 切换按钮状态
+    document.querySelectorAll('.template-type-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+
+    // 显示对应的模板编辑器
+    document.querySelectorAll('.template-textarea').forEach(textarea => {
+        textarea.style.display = 'none';
+    });
+    document.getElementById(`template${type.charAt(0).toUpperCase() + type.slice(1)}`).style.display = 'block';
+}
+
+function saveTemplate() {
+    const textarea = document.getElementById(`template${currentTemplateType.charAt(0).toUpperCase() + currentTemplateType.slice(1)}`);
+    const content = textarea.value.trim();
+
+    if (!content) {
+        alert('模板内容不能为空');
+        return;
+    }
+
+    templates[currentTemplateType] = content;
+
+    // 保存到本地存储
+    localStorage.setItem('reportTemplates', JSON.stringify(templates));
+
+    alert('模板保存成功！');
+}
+
+function loadTemplates() {
+    const saved = localStorage.getItem('reportTemplates');
+    if (saved) {
+        templates = JSON.parse(saved);
+
+        // 填充到编辑器
+        if (templates.daily) document.getElementById('templateDaily').value = templates.daily;
+        if (templates.weekly) document.getElementById('templateWeekly').value = templates.weekly;
+        if (templates.monthly) document.getElementById('templateMonthly').value = templates.monthly;
+    }
+}
+
+// 简单的 Markdown 解析器
 const marked = {
     parse: function(markdown) {
         if (!markdown) return '';

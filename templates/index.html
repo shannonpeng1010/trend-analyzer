@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>趋势图分析工具</title>
+    <title>我的分析工具</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -11,7 +11,7 @@
     <div class="container">
         <!-- 标题栏 -->
         <header class="header">
-            <h1><i class="fas fa-chart-line"></i> 趋势图分析工具</h1>
+            <h1><i class="fas fa-chart-line"></i> 我的分析工具</h1>
             <button class="btn-history" onclick="toggleHistory()">
                 <i class="fas fa-history"></i> 历史记录
             </button>
@@ -21,11 +21,32 @@
         <main class="main-content">
             <!-- 上传区域 -->
             <section class="upload-section">
-                <div class="upload-area" id="uploadArea">
-                    <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                    <p class="upload-text">点击或拖拽图片到此处上传</p>
-                    <p class="upload-hint">支持 JPG、PNG、GIF、WebP 格式</p>
-                    <input type="file" id="fileInput" accept="image/*" multiple style="display: none;">
+                <div class="upload-tabs">
+                    <button class="tab-btn active" onclick="switchTab('upload')">
+                        <i class="fas fa-upload"></i> 上传图片
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('paste')">
+                        <i class="fas fa-paste"></i> 粘贴图片
+                    </button>
+                </div>
+
+                <!-- 上传标签页 -->
+                <div class="tab-content" id="uploadTab">
+                    <div class="upload-area" id="uploadArea">
+                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                        <p class="upload-text">点击或拖拽图片到此处上传</p>
+                        <p class="upload-hint">支持 JPG、PNG、GIF、WebP 格式</p>
+                        <input type="file" id="fileInput" accept="image/*" multiple style="display: none;">
+                    </div>
+                </div>
+
+                <!-- 粘贴标签页 -->
+                <div class="tab-content" id="pasteTab" style="display: none;">
+                    <div class="paste-area" id="pasteArea" contenteditable="true">
+                        <i class="fas fa-clipboard upload-icon"></i>
+                        <p class="upload-text">在此处按 Ctrl+V 粘贴图片</p>
+                        <p class="upload-hint">从截图工具、聊天软件等直接复制粘贴</p>
+                    </div>
                 </div>
 
                 <!-- 预览区域 -->
@@ -41,9 +62,95 @@
 
                 <!-- 分析风格选择 -->
                 <div class="style-selection">
-                    <label><i class="fas fa-magic"></i> 选择分析风格（可多选）</label>
-                    <div class="style-grid" id="styleGrid">
-                        <!-- 动态生成 -->
+                    <label><i class="fas fa-magic"></i> 选择分析风格</label>
+
+                    <!-- 语气风格 -->
+                    <div class="style-group">
+                        <h4 class="style-group-title">语气风格（单选）</h4>
+                        <div class="style-grid">
+                            <div class="style-item">
+                                <input type="radio" name="tone" id="tone_formal" value="formal" checked>
+                                <label for="tone_formal" class="style-label">正式</label>
+                            </div>
+                            <div class="style-item">
+                                <input type="radio" name="tone" id="tone_concise" value="concise">
+                                <label for="tone_concise" class="style-label">简洁</label>
+                            </div>
+                            <div class="style-item">
+                                <input type="radio" name="tone" id="tone_detailed" value="detailed">
+                                <label for="tone_detailed" class="style-label">详细</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 分析视角 -->
+                    <div class="style-group">
+                        <h4 class="style-group-title">分析视角（可多选）</h4>
+                        <div class="style-grid">
+                            <div class="style-item">
+                                <input type="checkbox" id="view_tech" value="tech" checked>
+                                <label for="view_tech" class="style-label">技术视角</label>
+                            </div>
+                            <div class="style-item">
+                                <input type="checkbox" id="view_business" value="business">
+                                <label for="view_business" class="style-label">业务视角</label>
+                            </div>
+                            <div class="style-item">
+                                <input type="checkbox" id="view_management" value="management">
+                                <label for="view_management" class="style-label">管理视角</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 报告格式 -->
+                    <div class="style-group">
+                        <h4 class="style-group-title">报告格式（可选）</h4>
+                        <div class="style-grid">
+                            <div class="style-item">
+                                <input type="checkbox" id="format_daily" value="daily">
+                                <label for="format_daily" class="style-label">日报</label>
+                            </div>
+                            <div class="style-item">
+                                <input type="checkbox" id="format_weekly" value="weekly">
+                                <label for="format_weekly" class="style-label">周报</label>
+                            </div>
+                            <div class="style-item">
+                                <input type="checkbox" id="format_monthly" value="monthly">
+                                <label for="format_monthly" class="style-label">月报</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 报告模板管理 -->
+                <div class="template-section">
+                    <div class="template-header">
+                        <label>
+                            <i class="fas fa-file-alt"></i> 报告格式模板
+                            <span class="template-hint">（上传格式示例，AI 将学习并输出相似格式）</span>
+                        </label>
+                        <button class="btn-small" onclick="toggleTemplateManage()">
+                            <i class="fas fa-cog"></i> 管理模板
+                        </button>
+                    </div>
+
+                    <!-- 模板管理面板 -->
+                    <div class="template-manage" id="templateManage" style="display: none;">
+                        <div class="template-types">
+                            <button class="template-type-btn active" onclick="switchTemplateType('daily')">日报模板</button>
+                            <button class="template-type-btn" onclick="switchTemplateType('weekly')">周报模板</button>
+                            <button class="template-type-btn" onclick="switchTemplateType('monthly')">月报模板</button>
+                        </div>
+
+                        <div class="template-editor">
+                            <textarea id="templateDaily" class="template-textarea" placeholder="粘贴您的日报格式示例...&#10;&#10;例如：&#10;# 今日数据日报&#10;日期：2025-02-14&#10;&#10;## 核心指标&#10;- 访问量：xxxxx&#10;- 转化率：xx%&#10;..."></textarea>
+                            <textarea id="templateWeekly" class="template-textarea" style="display: none;" placeholder="粘贴您的周报格式示例..."></textarea>
+                            <textarea id="templateMonthly" class="template-textarea" style="display: none;" placeholder="粘贴您的月报格式示例..."></textarea>
+                        </div>
+
+                        <button class="btn-save-template" onclick="saveTemplate()">
+                            <i class="fas fa-save"></i> 保存模板
+                        </button>
                     </div>
                 </div>
 
