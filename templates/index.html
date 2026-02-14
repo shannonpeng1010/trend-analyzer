@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>趋势图分析工具</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 标题栏 -->
+        <header class="header">
+            <h1><i class="fas fa-chart-line"></i> 趋势图分析工具</h1>
+            <button class="btn-history" onclick="toggleHistory()">
+                <i class="fas fa-history"></i> 历史记录
+            </button>
+        </header>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 上传区域 -->
+            <section class="upload-section">
+                <div class="upload-area" id="uploadArea">
+                    <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                    <p class="upload-text">点击或拖拽图片到此处上传</p>
+                    <p class="upload-hint">支持 JPG、PNG、GIF、WebP 格式</p>
+                    <input type="file" id="fileInput" accept="image/*" multiple style="display: none;">
+                </div>
+
+                <!-- 预览区域 -->
+                <div class="preview-area" id="previewArea"></div>
+
+                <!-- 可选说明 -->
+                <div class="context-input">
+                    <label for="userContext">
+                        <i class="fas fa-comment-alt"></i> 补充说明（可选）
+                    </label>
+                    <textarea id="userContext" placeholder="可以添加关于图片的背景信息、特别关注点等..."></textarea>
+                </div>
+
+                <!-- 分析风格选择 -->
+                <div class="style-selection">
+                    <label><i class="fas fa-magic"></i> 选择分析风格（可多选）</label>
+                    <div class="style-grid" id="styleGrid">
+                        <!-- 动态生成 -->
+                    </div>
+                </div>
+
+                <!-- 保存名称 -->
+                <div class="save-name">
+                    <label for="saveName">
+                        <i class="fas fa-tag"></i> 保存名称（可选）
+                    </label>
+                    <input type="text" id="saveName" placeholder="为本次分析命名，方便后续查找...">
+                </div>
+
+                <!-- 分析按钮 -->
+                <button class="btn-analyze" id="analyzeBtn" onclick="startAnalyze()">
+                    <i class="fas fa-brain"></i> 开始分析
+                </button>
+            </section>
+
+            <!-- 结果展示区 -->
+            <section class="result-section" id="resultSection" style="display: none;">
+                <div class="result-header">
+                    <h2><i class="fas fa-chart-bar"></i> 分析结果</h2>
+                    <button class="btn-new" onclick="resetAnalysis()">
+                        <i class="fas fa-plus"></i> 新建分析
+                    </button>
+                </div>
+                <div class="result-content" id="resultContent">
+                    <!-- 动态生成分析结果 -->
+                </div>
+            </section>
+        </main>
+
+        <!-- 历史记录侧边栏 -->
+        <aside class="history-sidebar" id="historySidebar">
+            <div class="history-header">
+                <h3><i class="fas fa-history"></i> 历史记录</h3>
+                <button class="btn-close" onclick="toggleHistory()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="history-list" id="historyList">
+                <!-- 动态生成历史记录 -->
+            </div>
+        </aside>
+
+        <!-- 加载提示 -->
+        <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <p>正在分析中，请稍候...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
